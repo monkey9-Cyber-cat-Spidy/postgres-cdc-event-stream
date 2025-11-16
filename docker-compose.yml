@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  cdc-stream:
+    build: .
+    restart: always
+    ports:
+      - '6001:6001'
+    environment:
+      - NODE_ENV=production
+      - PORT=6001
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/cdc_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=cdc_db
+    ports:
+      - '5435:5432'
+    volumes:
+      - cdc_pgdata:/var/lib/postgresql/data
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  cdc_pgdata:
